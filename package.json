@@ -1,0 +1,60 @@
+{
+  "name": "at-storage",
+  "description": "An app to upload images to your public object storage",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "prepare": "panda codegen",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
+    "build": "npm run typecheck && electron-vite build",
+    "postinstall": "electron-builder install-app-deps",
+    "build:unpack": "npm run build && electron-builder --dir",
+    "build:win": "npm run build && electron-builder --win",
+    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:linux": "electron-vite build && electron-builder --linux"
+  },
+  "dependencies": {
+    "@ark-ui/react": "^4.9.1",
+    "@aws-sdk/client-s3": "^3.750.0",
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@hookform/resolvers": "^4.1.0",
+    "date-fns": "^4.1.0",
+    "electron-store": "^10.0.1",
+    "heic2any": "^0.0.4",
+    "lucide-react": "^0.475.0",
+    "mime": "^4.0.6",
+    "neverthrow": "^8.1.1",
+    "react-hook-form": "^7.54.2",
+    "ress": "^5.0.2",
+    "sharp": "^0.33.5",
+    "ulid": "^2.3.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@pandacss/dev": "^0.53.0",
+    "@park-ui/panda-preset": "^0.43.1",
+    "@types/node": "^22.13.4",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^34.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^3.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vite-tsconfig-paths": "^5.1.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "esbuild"]
+  }
+}
