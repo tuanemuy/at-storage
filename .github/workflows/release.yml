@@ -23,9 +23,10 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v4
 
+      - run: echo "TAG_NAME=$(echo '${{ github.event.pull_request.head.ref }}' | sed 's/release\///')" >> $GITHUB_ENV
+
       - name: Create Tag
         run: |
-          echo "TAG_NAME=$(echo '${{ github.event.pull_request.head.ref }}' | sed 's/release\///')" >> $GITHUB_ENV
           git tag ${{ env.TAG_NAME }}
           git push origin ${{ env.TAG_NAME }}
 
