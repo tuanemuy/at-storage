@@ -1,12 +1,16 @@
 name: Build/release
 
 on:
-  push:
-    tags:
-      - v*.*.*
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
 
 jobs:
   release:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
+
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
