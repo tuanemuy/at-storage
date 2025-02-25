@@ -23,6 +23,11 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v4
 
+      - name: Create Tag
+        run: |
+          git tag `echo '${{ github.event.pull_request.head.ref }}' | sed 's/release\///'`
+          git push origin `echo '${{ github.event.pull_request.head.ref }}' | sed 's/release\///'`
+
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
