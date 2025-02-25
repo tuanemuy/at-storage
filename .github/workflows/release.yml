@@ -42,11 +42,6 @@ jobs:
         with:
           ref: ${{ format('refs/tags/{0}', env.TAG_NAME) }}
 
-      - name: Create Tag
-        run: |
-          git tag ${{ env.TAG_NAME }}
-          git push origin ${{ env.TAG_NAME }}
-
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
