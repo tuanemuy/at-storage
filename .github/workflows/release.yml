@@ -8,7 +8,22 @@ on:
       - closed
 
 jobs:
+  tag:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          export TAG_NAME=$(echo '${{ github.event.pull_request.head.ref }}' | sed 's/release\///')
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+
   release:
+    needs: tag
     if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
 
     runs-on: ${{ matrix.os }}
@@ -20,10 +35,12 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
+      - run: echo "TAG_NAME=$(echo '${{ github.event.pull_request.head.ref }}' | sed 's/release\///')" >> $GITHUB_ENV
+
       - name: Check out Git repository
         uses: actions/checkout@v4
-
-      - run: echo "TAG_NAME=$(echo '${{ github.event.pull_request.head.ref }}' | sed 's/release\///')" >> $GITHUB_ENV
+        with:
+          ref: ${{ format('refs/tags/{0}', env.TAG_NAME) }}
 
       - name: Create Tag
         run: |
