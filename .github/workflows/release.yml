@@ -25,10 +25,9 @@ jobs:
 
       - name: Create Tag
         run: |
-          export TAG_NAME=$(echo '${{ github.event.pull_request.head.ref }}' | sed 's/release\///')
+          echo "TAG_NAME=$(echo '${{ github.event.pull_request.head.ref }}' | sed 's/release\///')" >> $GITHUB_ENV
           git tag ${{ env.TAG_NAME }}
           git push origin ${{ env.TAG_NAME }}
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
