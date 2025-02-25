@@ -7,7 +7,7 @@ import {
 import type {
   GetAppearanceResponseSchema,
   GetSettingsResponseSchema,
-} from "../../../preload/schema/main";
+} from "../../../ipc/schema/main";
 import type { useStorage } from "../hooks/storage";
 
 export type Store = {

@@ -3,7 +3,7 @@ import type { SubmitHandler } from "react-hook-form";
 import {
   type SaveAppearanceSchema,
   saveAppearanceSchema,
-} from "../../../preload/schema/main";
+} from "../../../ipc/schema/main";
 import { toaster } from "../components/ui/toaster";
 import { useZodForm } from "../hooks/zod-form";
 import { useStore } from "../store";
