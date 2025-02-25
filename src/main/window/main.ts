@@ -3,11 +3,6 @@ import { BrowserWindow, shell, nativeTheme, clipboard } from "electron";
 import { is } from "@electron-toolkit/utils";
 import type { App, Context } from "../app";
 import {
-  type SaveAppearanceSchema,
-  type SaveSettingsSchema,
-  type UploadFileSchema,
-  type ListFilesSchema,
-  type DeleteFileSchema,
   getAppearanceResponseSchema,
   saveAppearanceSchema,
   saveAppearanceResponseSchema,
@@ -17,7 +12,7 @@ import {
   uploadFileSchema,
   listFilesSchema,
   deleteFileSchema,
-} from "../../preload/schema/main";
+} from "../../ipc/schema/main";
 import { MainProcessError, MainProcessErrorCode } from "../error";
 import icon from "../../../resources/icon.png?asset";
 
@@ -105,38 +100,28 @@ export function registerMainWindow(app: App): void {
     }
   });
 
-  app.handle("main:save-settings", (context, _event, args) => {
-    let params: SaveSettingsSchema;
-    try {
-      params = saveSettingsSchema.parse(args[0] || {});
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.BAD_REQUEST,
-          message: "Failed to parse request parameters",
-          cause: e,
-        }),
-      };
-    }
-
-    try {
-      context.container.storeService.set("settings", params);
-      return {
-        ok: true,
-        value: saveSettingsResponseSchema.parse({ data: params }),
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.STORE_SERVICE_ERROR,
-          message: "Failed to save settings",
-          cause: e,
-        }),
-      };
-    }
-  });
+  app.handleWithSchema(
+    "main:save-settings",
+    saveSettingsSchema,
+    (context, _event, params) => {
+      try {
+        context.container.storeService.set("settings", params);
+        return {
+          ok: true,
+          value: saveSettingsResponseSchema.parse({ data: params }),
+        };
+      } catch (e) {
+        return {
+          ok: false,
+          error: new MainProcessError({
+            code: MainProcessErrorCode.STORE_SERVICE_ERROR,
+            message: "Failed to save settings",
+            cause: e,
+          }),
+        };
+      }
+    },
+  );
 
   app.handle("main:get-appearance", (context, _event) => {
     try {
@@ -157,159 +142,107 @@ export function registerMainWindow(app: App): void {
     }
   });
 
-  app.handle("main:save-appearance", (context, _event, args) => {
-    let params: SaveAppearanceSchema;
-    try {
-      params = saveAppearanceSchema.parse(args[0] || {});
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.BAD_REQUEST,
-          message: "Failed to parse request parameters",
-          cause: e,
-        }),
-      };
-    }
+  app.handleWithSchema(
+    "main:save-appearance",
+    saveAppearanceSchema,
+    (context, _event, params) => {
+      try {
+        nativeTheme.themeSource = params.theme;
+        context.container.storeService.set("appearance", params);
+        return {
+          ok: true,
+          value: saveAppearanceResponseSchema.parse({
+            data: params,
+            isDarkMode: nativeTheme.shouldUseDarkColors,
+          }),
+        };
+      } catch (e) {
+        return {
+          ok: false,
+          error: new MainProcessError({
+            code: MainProcessErrorCode.STORE_SERVICE_ERROR,
+            message: "Failed to save appearance settings",
+            cause: e,
+          }),
+        };
+      }
+    },
+  );
 
-    try {
-      nativeTheme.themeSource = params.theme;
-      context.container.storeService.set("appearance", params);
-      return {
-        ok: true,
-        value: saveAppearanceResponseSchema.parse({
-          data: params,
-          isDarkMode: nativeTheme.shouldUseDarkColors,
-        }),
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.STORE_SERVICE_ERROR,
-          message: "Failed to save appearance settings",
-          cause: e,
-        }),
-      };
-    }
-  });
+  app.handleWithSchema(
+    "main:upload-file",
+    uploadFileSchema,
+    async (context, _event, params) => {
+      try {
+        const result = await context.container.storageService.upload({
+          connection: params.connection,
+          processingOptions: params.imageProcessing,
+          name: params.name,
+          input: params.arrayBuffer,
+        });
+        return {
+          ok: true,
+          value: result,
+        };
+      } catch (e) {
+        return {
+          ok: false,
+          error: new MainProcessError({
+            code: MainProcessErrorCode.STORAGE_SERVICE_ERROR,
+            message: "Failed to upload files",
+            cause: e,
+          }),
+        };
+      }
+    },
+  );
 
-  app.handle("main:upload-file", async (context, _event, args) => {
-    if (args.length < 3) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.BAD_REQUEST,
-          message: "Bad request",
-        }),
-      };
-    }
+  app.handleWithSchema(
+    "main:list-files",
+    listFilesSchema,
+    async (context, _event, params) => {
+      try {
+        const result = await context.container.storageService.list(params);
+        return {
+          ok: true,
+          value: {
+            files: result.images,
+            nextToken: result.nextToken,
+          },
+        };
+      } catch (e) {
+        return {
+          ok: false,
+          error: new MainProcessError({
+            code: MainProcessErrorCode.STORAGE_SERVICE_ERROR,
+            message: "Failed to list files",
+            cause: e,
+          }),
+        };
+      }
+    },
+  );
 
-    let params: UploadFileSchema;
-    try {
-      params = uploadFileSchema.parse(args[0] || {});
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.BAD_REQUEST,
-          message: "Failed to parse request parameters",
-          cause: e,
-        }),
-      };
-    }
-
-    const name = args[1];
-    const input = args[2];
-    try {
-      const result = await context.container.storageService.upload({
-        connection: params.connection,
-        processingOptions: params.imageProcessing,
-        name,
-        input,
-      });
-      return {
-        ok: true,
-        value: result,
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.STORAGE_SERVICE_ERROR,
-          message: "Failed to upload files",
-          cause: e,
-        }),
-      };
-    }
-  });
-
-  app.handle("main:list-files", async (context, _event, args) => {
-    let params: ListFilesSchema;
-    try {
-      params = listFilesSchema.parse(args[0] || {});
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.BAD_REQUEST,
-          message: "Failed to parse request parameters",
-          cause: e,
-        }),
-      };
-    }
-
-    try {
-      const result = await context.container.storageService.list(params);
-      return {
-        ok: true,
-        value: {
-          files: result.images,
-          nextToken: result.nextToken,
-        },
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.STORAGE_SERVICE_ERROR,
-          message: "Failed to list files",
-          cause: e,
-        }),
-      };
-    }
-  });
-
-  app.handle("main:delete-file", async (context, _event, args) => {
-    let params: DeleteFileSchema;
-    try {
-      params = deleteFileSchema.parse(args[0] || {});
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.BAD_REQUEST,
-          message: "Failed to parse request parameters",
-          cause: e,
-        }),
-      };
-    }
-
-    try {
-      const result = await context.container.storageService.delete(params);
-      return {
-        ok: true,
-        value: result,
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        error: new MainProcessError({
-          code: MainProcessErrorCode.STORAGE_SERVICE_ERROR,
-          message: "Failed to delete files",
-          cause: e,
-        }),
-      };
-    }
-  });
+  app.handleWithSchema(
+    "main:delete-file",
+    deleteFileSchema,
+    async (context, _event, params) => {
+      try {
+        const result = await context.container.storageService.delete(params);
+        return {
+          ok: true,
+          value: result,
+        };
+      } catch (e) {
+        return {
+          ok: false,
+          error: new MainProcessError({
+            code: MainProcessErrorCode.STORAGE_SERVICE_ERROR,
+            message: "Failed to delete files",
+            cause: e,
+          }),
+        };
+      }
+    },
+  );
 }

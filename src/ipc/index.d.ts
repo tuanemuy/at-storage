@@ -1,5 +1,4 @@
 import type { ElectronAPI } from "@electron-toolkit/preload";
-import type { Theme } from "../lib/theme";
 import type { Result } from "../lib/result";
 import type {
   GetAppearanceResponseSchema,
@@ -29,9 +28,7 @@ declare global {
         params: SaveSettingsSchema,
       ) => Promise<Result<SaveSettingsResponseSchema>>;
       uploadFile: (
-        params: UpladFileSchema,
-        name: string,
-        arrayBuffer: ArrayBuffer,
+        params: UploadFileSchema,
       ) => Promise<Result<UploadFileResponseSchema>>;
       listFiles: (
         params: ListFilesSchema,

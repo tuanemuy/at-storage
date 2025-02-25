@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import type {
   GetAppearanceResponseSchema,
   GetSettingsResponseSchema,
-} from "../../../preload/schema/main";
+} from "../../../ipc/schema/main";
 import { StoreContext } from ".";
 import { useStorage } from "../hooks/storage";
 import { toaster } from "../components/ui/toaster";

@@ -4,7 +4,7 @@ import { useZodForm } from "../hooks/zod-form";
 import {
   type SaveSettingsSchema,
   saveSettingsSchema,
-} from "../../../preload/schema/main";
+} from "../../../ipc/schema/main";
 import { toaster } from "../components/ui/toaster";
 import { useStore } from "../store";
 

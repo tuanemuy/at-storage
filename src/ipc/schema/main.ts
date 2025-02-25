@@ -81,6 +81,8 @@ export type ImageProcessing = z.infer<typeof imageProcessingSchema>;
 export const uploadFileSchema = z.object({
   connection: connectionSchema,
   imageProcessing: imageProcessingSchema,
+  name: z.string().min(1),
+  arrayBuffer: z.any(),
 });
 export type UploadFileSchema = z.infer<typeof uploadFileSchema>;
 

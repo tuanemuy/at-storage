@@ -6,8 +6,8 @@
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.tsx",
     "src/renderer/styled-system/**/*",
-    "src/preload/*.d.ts",
-    "src/preload/schema/**/*",
+    "src/ipc/*.d.ts",
+    "src/ipc/schema/**/*",
     "src/lib/**/*",
     "src/service/**/*"
   ],

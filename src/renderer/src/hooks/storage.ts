@@ -7,7 +7,7 @@ import {
   uploadFileSchema,
   listFilesSchema,
   deleteFileSchema,
-} from "../../../preload/schema/main";
+} from "../../../ipc/schema/main";
 
 import { useState, useCallback } from "react";
 import { generateId } from "../../../lib/id";
@@ -25,7 +25,7 @@ type UseStorageParams = {
   imageProcessing: ImageProcessingStore;
   defaultDateString?: string;
   onUploaded?: (id: string) => void;
-  onUploadError?: (id: string) => void;
+  onUploadError?: () => void;
   onFetched?: () => void;
   onFetchError?: () => void;
   onDeleted?: (key: string) => void;
@@ -53,26 +53,22 @@ export function useStorage({
 
   const upload = useCallback(
     async (file: File) => {
-      const settings = uploadFileSchema.safeParse({
+      const name = file.name.split(".").slice(0, -1).join(".");
+      const params = uploadFileSchema.safeParse({
         connection,
         imageProcessing,
+        name,
+        arrayBuffer: await file.arrayBuffer(),
       });
-      if (!settings.success) {
-        onSettingsError?.();
+      if (!params.success) {
+        onUploadError?.();
         return;
       }
 
       const id = generateId();
-      setQueue((prev) => [
-        ...prev,
-        { id, name: file.name, status: "uploading" },
-      ]);
+      setQueue((prev) => [...prev, { id, name, status: "uploading" }]);
 
-      const result = await window.main.uploadFile(
-        settings.data,
-        file.name.split(".").slice(0, -1).join("."),
-        await file.arrayBuffer(),
-      );
+      const result = await window.main.uploadFile(params.data);
       if (result.ok) {
         onUploaded?.(id);
         fetch(connection, dateString);
@@ -85,7 +81,7 @@ export function useStorage({
           }),
         );
       } else {
-        onUploadError?.(id);
+        onUploadError?.();
         setQueue((prev) =>
           prev.map((item) => {
             if (item.id === id) {
@@ -96,14 +92,7 @@ export function useStorage({
         );
       }
     },
-    [
-      connection,
-      imageProcessing,
-      dateString,
-      onUploaded,
-      onUploadError,
-      onSettingsError,
-    ],
+    [connection, imageProcessing, dateString, onUploaded, onUploadError],
   );
 
   const complete = useCallback((id: string) => {

@@ -6,10 +6,13 @@ import {
   ipcMain,
 } from "electron";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
+import type { ZodType } from "zod";
 import { type IStoreService, StoreService } from "./service/store";
 import { type IStorageService, StorageService } from "./service/storage";
 import { appUserModeId, defaultImageProcessing } from "../lib/config";
 import { themes } from "../lib/theme";
+import { MainProcessError, MainProcessErrorCode } from "./error";
+
 import icon from "../../resources/icon.png?asset";
 
 const storeSchema = {
@@ -120,18 +123,30 @@ export type Context = {
 
 export type WindowEvent = "ready" | "activate";
 
+type Callback = (
+  context: Context,
+  event: IpcMainInvokeEvent,
+  // biome-ignore lint:
+  ...args: any[]
+  // biome-ignore lint:
+) => Promise<any> | any;
+
+type ValidatedCallback<T> = (
+  context: Context,
+  event: IpcMainInvokeEvent,
+  params: T,
+  // biome-ignore lint:
+) => Promise<any> | any;
+
 export type App = {
   on: {
     [key in WindowEvent]: (callback: (context: Context) => void) => void;
   };
-  handle: (
+  handle: (channel: string, callback: Callback) => void;
+  handleWithSchema: <T>(
     channel: string,
-    callback: (
-      context: Context,
-      event: IpcMainInvokeEvent,
-      // biome-ignore lint:
-      ...args: any[]
-    ) => void,
+    schema: ZodType<T>,
+    callback: ValidatedCallback<T>,
   ) => void;
 };
 
@@ -182,6 +197,36 @@ export function createApp(): App {
     }
   });
 
+  const handle = (channel: string, callback: Callback) => {
+    // biome-ignore lint:
+    ipcMain.handle(channel, (event, ...args: any[]) =>
+      callback(context, event, args),
+    );
+  };
+
+  const handleWithSchema = <T>(
+    channel: string,
+    schema: ZodType<T>,
+    callback: ValidatedCallback<T>,
+  ) => {
+    // biome-ignore lint:
+    ipcMain.handle(channel, (event, ...args: any[]) => {
+      try {
+        const params: T = schema.parse(args[0] || {});
+        return callback(context, event, params);
+      } catch (e) {
+        return {
+          ok: false,
+          error: new MainProcessError({
+            code: MainProcessErrorCode.BAD_REQUEST,
+            message: "Failed to parse request parameters",
+            cause: e,
+          }),
+        };
+      }
+    });
+  };
+
   return {
     on: {
       ready: (callback) => {
@@ -191,11 +236,7 @@ export function createApp(): App {
         app.on("activate", () => callback(context));
       },
     },
-    handle: (channel, callback) => {
-      // biome-ignore lint:
-      ipcMain.handle(channel, (event, ...args: any[]) =>
-        callback(context, event, args),
-      );
-    },
+    handle,
+    handleWithSchema,
   };
 }
